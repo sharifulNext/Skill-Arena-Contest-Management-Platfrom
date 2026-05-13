@@ -2,6 +2,12 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+@layer components {
+  .auth-input {
+    @apply w-full bg-slate-900/50 border border-slate-800 rounded-2xl py-3.5 px-4 outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all text-sm;
+  }
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
