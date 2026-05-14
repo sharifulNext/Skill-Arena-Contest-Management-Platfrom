@@ -6,7 +6,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { signIn } from "next-auth/react"; 
+import Swal from "sweetalert2";
+import { useRouter } from "next/navigation";
 
+// Form Validation Schema
 const registerSchema = z.object({
   name: z.string().min(2, "Name is too short"),
   email: z.string().email("Invalid email address"),
@@ -14,20 +18,89 @@ const registerSchema = z.object({
 });
 
 export default function RegisterPage() {
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const router = useRouter();
+  
+  const { 
+    register, 
+    handleSubmit, 
+    formState: { errors } 
+  } = useForm({
     resolver: zodResolver(registerSchema),
   });
 
-  const onSubmit = (data: any) => console.log("Form Data:", data);
+  const onSubmit = async (data: any) => {
+    // লোডিং দেখানো শুরু
+    Swal.fire({
+      title: "Creating Account...",
+      allowOutsideClick: false,
+      didOpen: () => { Swal.showLoading(); }
+    });
+
+    try {
+      // ১. ডাটাবেসে ইউজার সেভ করার জন্য API কল
+      const res = await fetch("/api/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      const result = await res.json();
+
+      if (res.ok) {
+        // ২. রেজিস্ট্রেশন সফল হলে অটোমেটিক লগইন করার চেষ্টা
+        const loginRes = await signIn("credentials", {
+          email: data.email,
+          password: data.password,
+          redirect: false, // আমরা ম্যানুয়ালি রিডাইরেক্ট করবো
+        });
+
+        if (loginRes?.error) {
+          // যদি অটো-লগইন ফেইল করে
+          Swal.fire({
+            icon: "warning",
+            title: "Account Created",
+            text: "Account created but auto-login failed. Please login manually.",
+          });
+          router.push("/login");
+        } else {
+          // ৩. লগইন সফল হলে সাকসেস মেসেজ দেখানো
+          Swal.fire({
+            icon: "success",
+            title: "Registration Successful!",
+            text: "Welcome to SkillArena",
+            timer: 1500,
+            showConfirmButton: false
+          });
+
+          // সেশন আপডেট নিশ্চিত করতে রিফ্রেশ এবং রিডাইরেক্ট
+          router.push("/");
+          router.refresh(); 
+        }
+      } else {
+        // API থেকে এরর আসলে
+        Swal.fire({
+          icon: "error",
+          title: "Registration Failed",
+          text: result.message || "Something went wrong",
+        });
+      }
+    } catch (error) {
+      console.error("Registration error:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Connection Error",
+        text: "Could not connect to the server",
+      });
+    }
+  };
 
   return (
-    // ব্যাকগ্রাউন্ড এখন সাদা (bg-white)
     <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2 bg-white text-slate-900 font-sans">
       
-      {/* --- Left Side: Branding (Clean White/Soft Gray Look) --- */}
+      {/* Left Side: Branding */}
       <div className="hidden lg:flex flex-col justify-between p-16 bg-slate-50 border-r border-slate-100">
         <Link href="/" className="flex items-center gap-2 font-black text-2xl tracking-tighter text-slate-900">
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white">S</div>
+          <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center text-white">S</div>
           SkillArena
         </Link>
 
@@ -42,11 +115,11 @@ export default function RegisterPage() {
         </div>
 
         <div className="text-slate-400 text-xs font-bold uppercase tracking-[0.3em]">
-          Powered by AI Judging
+          Powered by Tech Experts
         </div>
       </div>
 
-      {/* --- Right Side: Register Form --- */}
+      {/* Right Side: Register Form */}
       <div className="flex flex-col justify-center items-center p-8 md:p-16 relative bg-white">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
@@ -66,7 +139,6 @@ export default function RegisterPage() {
               <input 
                 {...register("name")}
                 placeholder="Enter your name" 
-                // ইনপুট এখন হালকা ধূসর ব্যাকগ্রাউন্ডের সাথে সাদা টেক্সট (যদি ডার্ক মোড হয়) বা ডার্ক টেক্সট
                 className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-5 outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-slate-400 text-sm text-slate-900"
               />
               {errors.name && <p className="text-red-500 text-[10px] ml-2">{errors.name.message as string}</p>}
@@ -77,7 +149,7 @@ export default function RegisterPage() {
               <input 
                 {...register("email")}
                 type="email"
-                placeholder="name@university.edu" 
+                placeholder="name@example.com" 
                 className="w-full bg-slate-50 border border-slate-200 rounded-2xl py-4 px-5 outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all placeholder:text-slate-400 text-sm text-slate-900"
               />
               {errors.email && <p className="text-red-500 text-[10px] ml-2">{errors.email.message as string}</p>}
@@ -94,12 +166,12 @@ export default function RegisterPage() {
               {errors.password && <p className="text-red-500 text-[10px] ml-2">{errors.password.message as string}</p>}
             </div>
 
-            <Button className="w-full py-7 rounded-2xl font-black text-lg bg-primary hover:bg-primary/90 text-white shadow-xl shadow-primary/20 active:scale-[0.98] transition-all">
+            <Button type="submit" className="w-full py-7 rounded-2xl font-black text-lg bg-black hover:bg-slate-800 text-white shadow-xl active:scale-[0.98] transition-all">
               SIGN UP
             </Button>
           </form>
 
-          {/* Google Login Section */}
+          {/* Social Divider */}
           <div className="space-y-4">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -112,6 +184,7 @@ export default function RegisterPage() {
 
             <button 
               type="button"
+              onClick={() => signIn("google", { callbackUrl: "/" })}
               className="w-full flex items-center justify-center gap-3 bg-white border border-slate-200 text-slate-900 font-bold py-4 rounded-2xl hover:bg-slate-50 transition-all active:scale-[0.98] shadow-sm"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
