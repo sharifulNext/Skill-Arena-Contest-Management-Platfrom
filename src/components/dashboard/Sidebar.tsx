@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
-
+import { X } from "lucide-react"; // 👈 মোবাইল ক্লোজ বাটনের জন্য লুসিড আইকন
 
 import {
   LayoutDashboard,
@@ -21,10 +21,15 @@ import {
   ShieldAlert,
 } from "lucide-react";
 
-export default function Sidebar() {
+// 🚀 গ্লোবাল লেআউট থেকে প্রপ্সের ইন্টারফেস টাইপ ডিফাইন করা হলো
+interface SidebarProps {
+  isOpen?: boolean;
+  setIsSidebarOpen?: (open: boolean) => void;
+}
+
+export default function Sidebar({ isOpen, setIsSidebarOpen }: SidebarProps) {
   const pathname = usePathname();
   const { data: session } = useSession();
-  
   
   const role = (session?.user as any)?.role || "PARTICIPANT";
 
@@ -56,33 +61,24 @@ export default function Sidebar() {
     { title: "Platform Settings", href: "/dashboard/admin/settings", icon: Settings },
   ];
 
- 
   let menu = participantMenu;
   if (role === "ORGANIZER") menu = organizerMenu;
   if (role === "ADMIN") menu = adminMenu;
 
   return (
     <aside
-      className="
-        fixed
-        left-0
-        top-0
-        z-50
-        h-screen
-        w-[280px]
-        border-r
-        border-slate-200/80
-        bg-white
-        p-5
-        shadow-sm
-        flex
-        flex-col
-        justify-between
-      "
+      className={cn(
+        `fixed left-0 top-0 z-50 h-screen w-[280px] border-r border-slate-200/80 bg-white p-5 shadow-sm 
+        flex flex-col justify-between transition-transform duration-300 ease-in-out`,
+        // 📱 মোবাইলের জন্য ডাইনামিক ক্লাস: ওপেন থাকলে স্ক্রিনে আসবে, না থাকলে বামে হাইড থাকবে
+        isOpen ? "translate-x-0" : "-translate-x-full",
+        // 💻 ল্যাপটপ বা পিসিতে (Large Screen) এটি সবসময় ফিক্সড ডিসপ্লে থাকবে
+        "lg:translate-x-0"
+      )}
     >
       <div>
-        {/* LOGO AREA */}
-        <div className="mb-10">
+        {/* LOGO AREA & MOBILE CLOSE BUTTON */}
+        <div className="flex items-center justify-between mb-10">
           <Link href="/" className="flex items-center gap-3 group">
             <div className="h-10 w-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black transition-transform group-hover:scale-105">
               S
@@ -95,18 +91,30 @@ export default function Sidebar() {
               </p>
             </div>
           </Link>
+
+          {/* ❌ মোবাইল স্ক্রিনের জন্য ক্লোজ বাটন (পিসিতে hidden থাকবে) */}
+          {setIsSidebarOpen && (
+            <button
+              onClick={() => setIsSidebarOpen(false)}
+              className="p-2 text-slate-500 hover:bg-slate-100 rounded-xl lg:hidden transition"
+              title="Close Menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
         {/* NAVIGATION LINKS */}
         <nav className="space-y-1.5">
           {menu.map((item) => {
-         
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
 
             return (
               <Link
                 key={item.title}
                 href={item.href}
+                // মোবাইল ইউজার এক্সপেরিয়েন্সের জন্য লিংকে ক্লিক করলে সাইডবার অটো বন্ধ হবে
+                onClick={() => setIsSidebarOpen && setIsSidebarOpen(false)}
                 className={cn(
                   "relative flex items-center gap-3 overflow-hidden rounded-2xl px-4 py-3.5 text-sm font-semibold transition-all group",
                   active
@@ -127,7 +135,6 @@ export default function Sidebar() {
                   />
                 )}
 
-                {/* Content layers kept at z-10 to stay visible above the background motion layer */}
                 <item.icon className="relative z-10 h-5 w-5 shrink-0" />
                 <span className="relative z-10">{item.title}</span>
               </Link>
@@ -136,7 +143,7 @@ export default function Sidebar() {
         </nav>
       </div>
 
-      {/* FOOTER / USER BRIEF INFO (OPTIONAL) */}
+      {/* FOOTER / USER BRIEF INFO */}
       <div className="pt-4 border-t border-slate-100 text-center">
         <p className="text-[11px] text-slate-400 font-medium">SkillArena v1.0.0 © 2026</p>
       </div>
