@@ -4,23 +4,24 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { FaTrophy, FaUsers, FaCircleCheck, FaArrowLeft } from "react-icons/fa6";
-import { Loader2, AlertCircle, Calendar, ShieldCheck, Share2, BarChart } from "lucide-react";
+import { Loader2, AlertCircle, Calendar, ShieldCheck, Share2, BarChart, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-// 🚀 ১. ডাটাবেজ রেসপন্স অনুযায়ী পারফেক্ট টাইপ ইন্টারফেস
+// 🚀 ১. ডাটাবেজ রেসপন্স অনুযায়ী পারফেক্ট টাইপ ইন্টারফেস
 interface ContestData {
   _id: string;
   title: string;
   description: string;
-  banner: string; // 👈 আপনার ডাটাবেজের 'banner' ফিল্ড
+  banner: string; 
   category: string;
   difficulty: string;
   prize: string;
+  entryFee: number; // 👈 ডাটাবেজে নাম্বার হিসেবে আছে
   startDate: string;
   endDate: string;
-  rules: string; // 👈 ডাটাবেজে স্ট্রিং হিসেবে আছে
+  rules: string; 
   status: string;
-  participants: string[]; // 👈 ডাটাবেজে অ্যারে হিসেবে আছে
+  participants: string[]; 
 }
 
 export default function PublicContestDetails() {
@@ -92,7 +93,7 @@ export default function PublicContestDetails() {
     );
   }
 
-  // ডেট ফরম্যাটিং (endDate থেকে নেওয়া হয়েছে)
+  // ডেট ফরম্যাটিং
   const formattedDeadline = contest.endDate 
     ? new Date(contest.endDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
     : "TBD";
@@ -101,7 +102,7 @@ export default function PublicContestDetails() {
     <div className="min-h-screen bg-slate-50/50 pb-24 pt-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* ব্যাক লিংক এবং শেয়ার বাটন */}
+        {/* ব্যাক লিংক এবং শেয়ার বাটন */}
         <div className="flex items-center justify-between mb-6">
           <button 
             onClick={() => router.back()} 
@@ -119,7 +120,7 @@ export default function PublicContestDetails() {
           </button>
         </div>
 
-        {/* 🖼️ ১. হিরো সেকশন (আপনার ডাটাবেজের রিয়েল ব্যানার ও ক্যাটাগরি সহ) */}
+        {/* 🖼️ ১. হিরো সেকশন */}
         <div className="relative h-[280px] sm:h-[380px] md:h-[460px] w-full rounded-[2.5rem] overflow-hidden mb-12 shadow-md border border-slate-100">
           <Image 
             src={contest.banner || "https://images.unsplash.com/photo-1633356122544-f134324a6cee"} 
@@ -127,11 +128,10 @@ export default function PublicContestDetails() {
             fill 
             priority 
             className="object-cover"
-            unoptimized={contest.banner?.startsWith("data:")} // base64 ইমেজের পারফরম্যান্স অপ্টিমাইজেশনের জন্য
+            unoptimized={contest.banner?.startsWith("data:")}
           />
           <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent flex items-end p-6 sm:p-10 md:p-16">
             <div className="max-w-4xl">
-              {/* ক্যাটাগরি ব্যাজ */}
               <span className="inline-block bg-blue-600 text-white font-extrabold text-xs uppercase tracking-widest px-3.5 py-1.5 rounded-xl mb-4 shadow-sm">
                 {contest.category || "General"}
               </span>
@@ -192,7 +192,6 @@ export default function PublicContestDetails() {
                   <h2 className="text-xl sm:text-2xl font-black text-slate-900 mb-6">Execution & Guidelines</h2>
                   <ul className="space-y-4">
                     {contest.rules ? (
-                      // 🛠️ ফিক্স: স্ট্রিংকে নিউলাইন বা এন্টার (\n) দিয়ে স্প্লিট করে চমৎকার লিস্ট তৈরি করা
                       contest.rules.split("\n").map((rule, index) => (
                         rule.trim() && (
                           <li key={index} className="flex gap-3.5 items-start text-slate-600 text-sm sm:text-base font-medium">
@@ -223,12 +222,28 @@ export default function PublicContestDetails() {
             </div>
           </div>
 
-          {/* ডান কলাম: অ্যাকশন ও কুইক সাইড ইনফো */}
+          {/* 👉 ডান কলাম: অ্যাকশন ও কুইক সাইড ইনফো (এন্ট্রি ফি সহ আপডেট করা হয়েছে) */}
           <div className="lg:col-span-1 sticky top-28">
             <div className="bg-slate-900 text-white p-6 sm:p-8 rounded-[2.5rem] shadow-xl shadow-slate-900/10 border border-slate-800">
               <h3 className="text-lg sm:text-xl font-black mb-6">Enter The Arena</h3>
               
               <div className="space-y-4 border-b border-slate-800 pb-6 mb-6">
+                {/* 🚀 নতুন যুক্ত করা হয়েছে: Registration Fee */}
+                <div className="flex justify-between items-center text-xs sm:text-sm">
+                  <span className="text-slate-400 font-medium flex items-center gap-1.5">
+                    <Coins className="w-4 h-4 text-slate-400" /> Entry Fee
+                  </span>
+                  {!contest.entryFee || contest.entryFee === 0 ? (
+                    <span className="text-emerald-400 font-black bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-xl text-xs uppercase tracking-wider">
+                      Free Entry
+                    </span>
+                  ) : (
+                    <span className="text-amber-400 font-black bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-xl text-xs">
+                      ${contest.entryFee} 
+                    </span>
+                  )}
+                </div>
+
                 <div className="flex justify-between items-center text-xs sm:text-sm">
                   <span className="text-slate-400 font-medium flex items-center gap-1.5">
                     <BarChart className="w-4 h-4 text-slate-400" /> Difficulty
@@ -237,6 +252,7 @@ export default function PublicContestDetails() {
                     {contest.difficulty || "All Levels"}
                   </span>
                 </div>
+                
                 <div className="flex justify-between items-center text-xs sm:text-sm">
                   <span className="text-slate-400 font-medium flex items-center gap-1.5">
                     <Calendar className="w-4 h-4 text-slate-400" /> Deadline
@@ -245,12 +261,12 @@ export default function PublicContestDetails() {
                 </div>
               </div>
 
-              {/* অ্যাকশন বাটন */}
+              {/* অ্যাকশন বাটন (ডাইনামিক টেক্সট সহ) */}
               <Button 
                 onClick={() => router.push(`/dashboard/participant/contests/${id}`)}
-                className="w-full py-6 sm:py-7 rounded-2xl font-black text-base bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-md active:scale-[0.99]"
+                className="w-full py-6 sm:py-7 rounded-2xl font-black text-sm bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-md active:scale-[0.99] tracking-wider uppercase"
               >
-                JOIN THIS CONTEST
+                {!contest.entryFee || contest.entryFee === 0 ? "Join For Free" : "Pay & Join Arena"}
               </Button>
               
               <div className="mt-6 flex items-center justify-center gap-2 text-[11px] text-slate-400 font-medium uppercase tracking-wider">

@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
+import Link from "next/link"; 
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
-import { X } from "lucide-react"; // 👈 মোবাইল ক্লোজ বাটনের জন্য লুসিড আইকন
+import { X } from "lucide-react"; 
 
 import {
   LayoutDashboard,
@@ -19,9 +19,10 @@ import {
   Gavel,
   Users,
   ShieldAlert,
+  Megaphone, 
+  Award,     
 } from "lucide-react";
 
-// 🚀 গ্লোবাল লেআউট থেকে প্রপ্সের ইন্টারফেস টাইপ ডিফাইন করা হলো
 interface SidebarProps {
   isOpen?: boolean;
   setIsSidebarOpen?: (open: boolean) => void;
@@ -48,8 +49,12 @@ export default function Sidebar({ isOpen, setIsSidebarOpen }: SidebarProps) {
     { title: "Dashboard", href: "/dashboard/organizer", icon: LayoutDashboard },
     { title: "Create Contest", href: "/dashboard/organizer/create-contest", icon: PlusCircle },
     { title: "Manage Contests", href: "/dashboard/organizer/manage-contests", icon: FolderLock },
-    { title: "Analytics", href: "/dashboard/organizer/analytics", icon: BarChart3 },
-    { title: "Judges", href: "/dashboard/organizer/judges", icon: Gavel },
+    { title: "Submissions & AI", href: "/dashboard/organizer/submissions", icon: FileText }, 
+    { title: "Judges Panel", href: "/dashboard/organizer/judges", icon: Gavel },            
+    { title: "Analytics", href: "/dashboard/organizer/analytics", icon: BarChart3 },        
+    { title: "Publish Results", href: "/dashboard/organizer/results", icon: Award },         
+    { title: "Announcements", href: "/dashboard/organizer/announcements", icon: Megaphone }, 
+    { title: "Settings", href: "/dashboard/organizer/settings", icon: Settings },
   ];
 
   // ৩. Admin Menu Configuration
@@ -58,6 +63,8 @@ export default function Sidebar({ isOpen, setIsSidebarOpen }: SidebarProps) {
     { title: "Users", href: "/dashboard/admin/users", icon: Users },
     { title: "All Contests", href: "/dashboard/admin/all-contests", icon: Trophy },
     { title: "Reports", href: "/dashboard/admin/reports", icon: ShieldAlert },
+    { title: "Judges Panel", href: "/dashboard/admin/judges", icon: Gavel },
+    {title:"AI-Control", href:"/dashboard/admin/ai-control", icon: FileText},
     { title: "Platform Settings", href: "/dashboard/admin/settings", icon: Settings },
   ];
 
@@ -70,9 +77,7 @@ export default function Sidebar({ isOpen, setIsSidebarOpen }: SidebarProps) {
       className={cn(
         `fixed left-0 top-0 z-50 h-screen w-[280px] border-r border-slate-200/80 bg-white p-5 shadow-sm 
         flex flex-col justify-between transition-transform duration-300 ease-in-out`,
-        // 📱 মোবাইলের জন্য ডাইনামিক ক্লাস: ওপেন থাকলে স্ক্রিনে আসবে, না থাকলে বামে হাইড থাকবে
         isOpen ? "translate-x-0" : "-translate-x-full",
-        // 💻 ল্যাপটপ বা পিসিতে (Large Screen) এটি সবসময় ফিক্সড ডিসপ্লে থাকবে
         "lg:translate-x-0"
       )}
     >
@@ -92,7 +97,6 @@ export default function Sidebar({ isOpen, setIsSidebarOpen }: SidebarProps) {
             </div>
           </Link>
 
-          {/* ❌ মোবাইল স্ক্রিনের জন্য ক্লোজ বাটন (পিসিতে hidden থাকবে) */}
           {setIsSidebarOpen && (
             <button
               onClick={() => setIsSidebarOpen(false)}
@@ -105,7 +109,7 @@ export default function Sidebar({ isOpen, setIsSidebarOpen }: SidebarProps) {
         </div>
 
         {/* NAVIGATION LINKS */}
-        <nav className="space-y-1.5">
+        <nav className="space-y-1.5 overflow-y-auto max-h-[calc(100vh-160px)] pr-1 scrollbar-none">
           {menu.map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
 
@@ -113,7 +117,6 @@ export default function Sidebar({ isOpen, setIsSidebarOpen }: SidebarProps) {
               <Link
                 key={item.title}
                 href={item.href}
-                // মোবাইল ইউজার এক্সপেরিয়েন্সের জন্য লিংকে ক্লিক করলে সাইডবার অটো বন্ধ হবে
                 onClick={() => setIsSidebarOpen && setIsSidebarOpen(false)}
                 className={cn(
                   "relative flex items-center gap-3 overflow-hidden rounded-2xl px-4 py-3.5 text-sm font-semibold transition-all group",
@@ -122,7 +125,6 @@ export default function Sidebar({ isOpen, setIsSidebarOpen }: SidebarProps) {
                     : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
                 )}
               >
-                {/* Framer Motion Active Indicator Layer */}
                 {active && (
                   <motion.div
                     layoutId="sidebar-active-indicator"
@@ -143,7 +145,7 @@ export default function Sidebar({ isOpen, setIsSidebarOpen }: SidebarProps) {
         </nav>
       </div>
 
-      {/* FOOTER / USER BRIEF INFO */}
+      {/* FOOTER */}
       <div className="pt-4 border-t border-slate-100 text-center">
         <p className="text-[11px] text-slate-400 font-medium">SkillArena v1.0.0 © 2026</p>
       </div>

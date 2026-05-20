@@ -28,6 +28,13 @@ const ContestSchema = new Schema(
       type: String, 
       required: [true, "Prize pool info is required"] 
     },
+    
+    entryFee:{
+        type:Number,
+        default:0,
+        required:true
+            },
+    
     startDate: { 
       type: Date, 
       required: [true, "Start date is required"] 
@@ -57,7 +64,7 @@ const ContestSchema = new Schema(
       default: "Draft" 
     },
     
-    // 🔥 Phase 6: AI Judging Criteria Weights
+    //  Phase 6: AI Judging Criteria Weights
     // প্রজেক্টকে ইনসেন লেভেলে নেওয়ার জন্য ৫টি ক্রাইটেরিয়া আগে থেকেই স্কিমাতে ডিফাইন করে রাখলাম
     aiJudgingWeights: {
       codeQuality: { type: Number, default: 20 },
@@ -68,9 +75,9 @@ const ContestSchema = new Schema(
     }
   },
   { 
-    timestamps: true // এটি অটোমেটিক createdAt এবং updatedAt টাইমস্ট্যাম্প হ্যান্ডেল করবে
+    timestamps: true 
   }
 );
 
-// Next.js সার্ভারলেস এনভায়রনমেন্টে মডেল রিলোডিং বাগ এড়াতে models.Contest চেক করা হয়েছে
+
 export const Contest = models.Contest || model("Contest", ContestSchema);

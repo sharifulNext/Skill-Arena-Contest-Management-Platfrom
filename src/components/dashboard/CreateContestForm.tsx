@@ -1,9 +1,8 @@
-// src/components/CreateContestForm.tsx (অথবা আপনার ফাইল লোকেশন অনুযায়ী)
 "use client";
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Trophy, Calendar, Sparkles, BookOpen, Layers, Loader2, Upload, X } from "lucide-react";
+import { Trophy, Calendar, Sparkles, BookOpen, Layers, Loader2, Upload, X, Coins } from "lucide-react";
 import Swal from "sweetalert2";
 
 export default function CreateContestForm() {
@@ -18,6 +17,7 @@ export default function CreateContestForm() {
     category: "Coding",
     difficulty: "Intermediate",
     prize: "",
+    entryFee: 0, // 👈 নতুন যুক্ত করা হয়েছে (ডিফল্ট ০ অর্থাৎ ফ্রি)
     startDate: "",
     endDate: "",
     rules: "",
@@ -74,7 +74,7 @@ export default function CreateContestForm() {
       Swal.fire({
         icon: "success",
         title: "Contest Created! 🎉",
-        text: "Saved as Draft successfully with Cloudinary Link.",
+        text: "Saved successfully with Cloudinary Link.",
         customClass: { popup: "rounded-3xl" },
         confirmButtonColor: "#0f172a"
       });
@@ -155,6 +155,23 @@ export default function CreateContestForm() {
             <option>Advanced</option>
           </select>
         </div>
+      </div>
+
+      {/* 👉 নতুন যুক্ত করা হয়েছে: Entry Fee Field (Full Width) */}
+      <div className="space-y-2">
+        <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+          <Coins className="w-4 h-4 text-slate-400" /> Registration Entry Fee (USD)
+        </label>
+        <input 
+          type="number" 
+          min="0"
+          value={formData.entryFee}
+          placeholder="Enter fee amount (e.g. 500) or keep 0 for Free" 
+          required
+          className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 font-medium transition"
+          onChange={(e) => setFormData({...formData, entryFee: Number(e.target.value)})}
+        />
+        <p className="text-[11px] text-slate-400 font-medium">Keep it <strong className="text-slate-600">0</strong> if this arena challenge has no registration criteria.</p>
       </div>
 
       {/* 📁 Upload Box */}
