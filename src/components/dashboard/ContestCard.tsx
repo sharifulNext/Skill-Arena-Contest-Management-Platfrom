@@ -12,6 +12,7 @@ interface Contest {
   category: string;
   difficulty: string;
   prize: string;
+  entryFee: number;
   startDate: string;
   endDate: string;
   rules: string;

@@ -219,7 +219,7 @@ export default function ManageContestsPage() {
             {contests.map((contest) => (
               <ContestCard
                 key={contest._id}
-                contest={contest}
+                contest={contest as any}
                 onDelete={handleDelete}
                 onPublish={handlePublish}
                 onEdit={handleEditOpen}
