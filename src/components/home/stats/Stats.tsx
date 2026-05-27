@@ -3,13 +3,19 @@
 import { motion, useInView, useMotionValue, useSpring } from "framer-motion";
 import { useEffect, useRef } from "react";
 
+/**
+ * AnimatedNumber কম্পোনেন্ট: 
+ * এটি একটি সংখ্যাকে স্মুথলি অ্যানিমেট করে। 
+ * TypeScript এরর এড়াতে এখানে HTMLSpanElement ব্যবহার করা হয়েছে।
+ */
 function AnimatedNumber({ value }: { value: number }) {
-  const ref = useRef(null);
+  const ref = useRef<HTMLSpanElement>(null);
   const motionValue = useMotionValue(0);
   const springValue = useSpring(motionValue, {
     damping: 30,
     stiffness: 100,
   });
+  
   const isInView = useInView(ref, { once: true });
 
   useEffect(() => {
@@ -19,13 +25,16 @@ function AnimatedNumber({ value }: { value: number }) {
   }, [isInView, value, motionValue]);
 
   useEffect(() => {
-    springValue.on("change", (latest) => {
+    // springValue এর পরিবর্তন অনুযায়ী টেক্সট আপডেট করা
+    const unsubscribe = springValue.on("change", (latest) => {
       if (ref.current) {
         ref.current.textContent = Intl.NumberFormat("en-US").format(
           Math.floor(latest)
         );
       }
     });
+
+    return () => unsubscribe(); // মেমোরি লিক রোধ করতে ক্লিনআপ
   }, [springValue]);
 
   return <span ref={ref} />;
