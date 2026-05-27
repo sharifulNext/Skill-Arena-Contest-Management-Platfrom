@@ -1,80 +1,184 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { 
-  Trophy, Search, Filter, Check, X, Trash2, 
-  Star, ShieldAlert, ArrowUpRight, Calendar, DollarSign 
+  Trophy, Search, Check, X, Trash2, 
+  Star, ShieldAlert, Calendar, DollarSign, Loader2 
 } from "lucide-react";
-import { motion } from "framer-motion";
 import Swal from "sweetalert2";
 
-// 📋 ডামি কন্টেস্ট ডেটাবেজ
-const initialContests = [
-  { id: "c1", title: "NextJS 16 Production Sprint", organizer: "SkillArena HQ", status: "PENDING", reports: 0, isFeatured: false, deadline: "30 May, 2026", prize: "$1,500" },
-  { id: "c2", title: "Web3 Solis Speedrun", organizer: "CryptoLabs BD", status: "APPROVED", reports: 0, isFeatured: true, deadline: "05 June, 2026", prize: "$2,500" },
-  { id: "c3", title: "AI Automated Agent Blitz", organizer: "Neural Networks", status: "LIVE", reports: 1, isFeatured: false, deadline: "25 May, 2026", prize: "$5,000" },
-  { id: "c4", title: "Legacy React Optimization", organizer: "Devs-Community", status: "ENDED", reports: 4, isFeatured: false, deadline: "10 May, 2026", prize: "$800" },
-  { id: "c5", title: "Scraping Bot Architecture", organizer: "Spammy Org", status: "LIVE", reports: 8, isFeatured: false, deadline: "28 May, 2026", prize: "$300" },
-];
+interface ContestMatrix {
+  _id: string;
+  title: string;
+  createdBy: { _id: string; name: string } | null;
+  status: string;
+  reports?: number;
+  isFeatured?: boolean;
+  endDate: string;
+  prize: string;
+}
 
 export default function AdminContestModeration() {
-  const [contests, setContests] = useState(initialContests);
+  const [contests, setContests] = useState<ContestMatrix[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
 
-  const handleApproveContest = (id: string) => {
-    setContests(contests.map(c => c.id === id ? { ...c, status: "APPROVED" } : c));
-    Swal.fire({
-      icon: "success",
-      title: "Contest Approved! 🟢",
-      text: "The contest state has progressed to APPROVED.",
-      customClass: { popup: "rounded-3xl" },
-      confirmButtonColor: "#0f172a"
-    });
+  // 📡 ডাটাবেজ থেকে রিয়েল-টাইম ডাটা ফেচ পাইপলাইন
+  const fetchContests = async () => {
+    try {
+      const res = await fetch("/api/admin/contests");
+      
+      // 🛡️ সেফটি গার্ড: এপিআই বডি ব্ল্যাঙ্ক বা ক্র্যাশ হলে হ্যান্ডেল করবে
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Server returned status ${res.status}: ${errText || "Empty Response"}`);
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        setContests(data.data);
+      }
+    } catch (err) {
+      console.error("Failed to sync arena nodes:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleRejectContest = (id: string) => {
-    setContests(contests.map(c => c.id === id ? { ...c, status: "REJECTED" } : c));
-    Swal.fire({
-      icon: "error",
-      title: "Contest Rejected",
-      text: "The contest application has been declined.",
-      customClass: { popup: "rounded-3xl" },
-      confirmButtonColor: "#0f172a"
-    });
+  useEffect(() => {
+    fetchContests();
+  }, []);
+
+  // 🟢 ১. অ্যাপ্রুভ / পাবলিশ অ্যাকশন
+  const handleApproveContest = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/contests/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "Published" })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setContests(contests.map(c => c._id === id ? { ...c, status: "Published" } : c));
+        Swal.fire({
+          icon: "success",
+          title: "Contest Live! 🟢",
+          text: "The arena has been successfully deployed to core nodes.",
+          customClass: { popup: "rounded-3xl" },
+          confirmButtonColor: "#0f172a"
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const handleToggleFeature = (id: string, currentFeatured: boolean) => {
-    setContests(contests.map(c => c.id === id ? { ...c, isFeatured: !currentFeatured } : c));
+  // 🔴 ২. রিজেক্ট / মুভ টু ড্রাফট অ্যাকশন
+  const handleRejectContest = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/contests/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "Draft" })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setContests(contests.map(c => c._id === id ? { ...c, status: "Draft" } : c));
+        Swal.fire({
+          icon: "error",
+          title: "Contest Restricted",
+          text: "The contest payload has been restricted back to Draft.",
+          customClass: { popup: "rounded-3xl" },
+          confirmButtonColor: "#0f172a"
+        });
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
+  // ⭐️ ৩. প্রিমিয়াম ফিচার টগল অ্যাকশন
+  const handleToggleFeature = async (id: string, currentFeatured: boolean) => {
+    try {
+      const nextFeatured = !currentFeatured;
+      const res = await fetch(`/api/admin/contests/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isFeatured: nextFeatured })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setContests(contests.map(c => c._id === id ? { ...c, isFeatured: nextFeatured } : c));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // 🗑️ ৪. পার্মানেন্টলি ডাটা ডিলিট অপারেশন
   const handleDeleteContest = (id: string, title: string) => {
     Swal.fire({
       title: "Purge Arena?",
-      text: `Permanently destroy "${title}"?`,
+      text: `Permanently destroy "${title}" from clusters?`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#e11d48",
       cancelButtonColor: "#64748b",
       confirmButtonText: "Yes, Delete",
       customClass: { popup: "rounded-3xl" }
-    }).then((result) => {
+    }).then(async (result) => {
       if (result.isConfirmed) {
-        setContests(contests.filter(c => c.id !== id));
+        try {
+          const res = await fetch(`/api/admin/contests/${id}`, { method: "DELETE" });
+          const data = await res.json();
+
+          if (data.success) {
+            setContests(contests.filter(c => c._id !== id));
+            Swal.fire({
+              title: "Purged!",
+              text: "The arena object has been permanently wiped.",
+              icon: "success",
+              confirmButtonColor: "#0f172a",
+              customClass: { popup: "rounded-3xl" }
+            });
+          }
+        } catch (err) {
+          console.error(err);
+        }
       }
     });
   };
 
+  // 🔍 সার্চ অ্যান্ড ফিল্টার প্রসেসর
   const filteredContests = contests.filter(c => {
-    const matchesSearch = c.title.toLowerCase().includes(search.toLowerCase()) || c.organizer.toLowerCase().includes(search.toLowerCase());
-    const matchesFilter = statusFilter === "ALL" || c.status === statusFilter || (statusFilter === "FLAGGED" && c.reports > 3);
+    const organizerName = c.createdBy?.name || "Unknown";
+    const matchesSearch = c.title.toLowerCase().includes(search.toLowerCase()) || organizerName.toLowerCase().includes(search.toLowerCase());
+    
+    const reportsCount = c.reports || 0;
+    const matchesFilter = statusFilter === "ALL" || 
+                          (statusFilter === "PENDING" && c.status === "Draft") ||
+                          (statusFilter === "APPROVED" && c.status === "Published") ||
+                          (statusFilter === "FLAGGED" && reportsCount > 3);
     return matchesSearch && matchesFilter;
   });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-2">
+        <Loader2 className="w-10 h-10 text-slate-800 animate-spin" />
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Scanning Active Arenas...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 md:p-10 space-y-6 md:space-y-8 bg-slate-50 min-h-screen">
       
-      {/* 👑 হেডার এরিয়া (Responsive Flex) */}
+      {/* 👑 হেডার */}
       <div className="space-y-1">
         <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
           <Trophy className="w-6 h-6 sm:w-8 h-8 text-slate-700" /> Contest Gatekeeper
@@ -82,9 +186,8 @@ export default function AdminContestModeration() {
         <p className="text-slate-500 text-xs sm:text-sm font-medium">Verify structural contest payloads, feature premium pools, and isolate reported abuse triggers.</p>
       </div>
 
-      {/* 🎛️ কন্ট্রোল ফিল্টার বার (Full Responsive Stack) */}
+      {/* 🎛️ ফিল্টার প্যানেল */}
       <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center bg-white/70 backdrop-blur-xl border border-slate-200/60 p-4 rounded-2xl shadow-sm">
-        {/* সার্চ বার */}
         <div className="relative w-full sm:max-w-xs">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input 
@@ -96,7 +199,6 @@ export default function AdminContestModeration() {
           />
         </div>
 
-        {/* ফিল্টার ড্রপডাউন */}
         <div className="w-full sm:w-auto">
           <select
             value={statusFilter}
@@ -104,16 +206,14 @@ export default function AdminContestModeration() {
             className="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-600 focus:outline-none focus:border-slate-900 cursor-pointer"
           >
             <option value="ALL">All Lifecycles</option>
-            <option value="PENDING">Pending Approval</option>
-            <option value="APPROVED">Approved Arenas</option>
-            <option value="LIVE">Live Channels</option>
-            <option value="ENDED">Ended Tracks</option>
-            <option value="FLAGGED">Abuse / High Reports ⚠️</option>
+            <option value="PENDING">Pending (Drafts)</option>
+            <option value="APPROVED">Published Arenas</option>
+            <option value="FLAGGED">High Reports ⚠️</option>
           </select>
         </div>
       </div>
 
-      {/* 📱 ১. মোবাইল ভিউ: রেসপনসিভ কার্ড লেআউট (Hidden on large screens, shown on mobile/tablet) */}
+      {/* 📱 মোবাইল রেসপনসিভ ভিউ */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:hidden">
         {filteredContests.length === 0 ? (
           <div className="p-8 text-center bg-white rounded-2xl text-xs font-semibold text-slate-400 col-span-full">
@@ -121,58 +221,42 @@ export default function AdminContestModeration() {
           </div>
         ) : (
           filteredContests.map((contest) => (
-            <div key={contest.id} className="bg-white border border-slate-200/70 p-5 rounded-2xl shadow-sm space-y-4 relative overflow-hidden">
-              {/* মেইন কন্টেন্ট */}
+            <div key={contest._id} className="bg-white border border-slate-200/70 p-5 rounded-2xl shadow-sm space-y-4 relative overflow-hidden">
               <div className="space-y-2">
                 <div className="flex justify-between items-start gap-2">
                   <h4 className="font-bold text-slate-900 text-sm leading-tight">{contest.title}</h4>
                   <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider shrink-0 ${
-                    contest.status === "LIVE" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" :
-                    contest.status === "APPROVED" ? "bg-blue-50 text-blue-700 border border-blue-100" :
-                    contest.status === "PENDING" ? "bg-amber-50 text-amber-700 border border-amber-100" :
-                    "bg-slate-100 text-slate-600"
-                  }`}>
-                    {contest.status}
-                  </span>
+                    contest.status === "Published" ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-amber-50 text-amber-700 border border-amber-100"
+                  }`}>{contest.status}</span>
                 </div>
-
-                <p className="text-xs text-slate-400 font-semibold">by {contest.organizer}</p>
+                <p className="text-xs text-slate-400 font-semibold">by {contest.createdBy?.name || "Unknown Organizer"}</p>
               </div>
 
-              {/* মেটা ডাটা (প্রাইজ ও ডেডলাইন) */}
               <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-[11px] font-bold">
                 <div className="text-indigo-600 bg-indigo-50/60 p-2 rounded-xl flex items-center gap-1">
                   <DollarSign className="w-3.5 h-3.5" /> Pool: {contest.prize}
                 </div>
                 <div className="text-slate-500 bg-slate-50 p-2 rounded-xl flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5" /> End: {contest.deadline}
+                  <Calendar className="w-3.5 h-3.5" /> {new Date(contest.endDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
                 </div>
               </div>
 
-              {/* অ্যাবিউজ ফ্ল্যাগ ট্রিগার */}
-              {contest.reports > 0 && (
-                <div className={`p-2 rounded-xl text-xs font-bold flex items-center gap-1.5 justify-center ${contest.reports > 3 ? "bg-rose-50 text-rose-600 border border-rose-100" : "bg-amber-50 text-amber-600"}`}>
-                  <ShieldAlert className="w-4 h-4" /> {contest.reports} Security Flags
-                </div>
-              )}
-
-              {/* মোবাইল অ্যাকশন বাটন প্যানেল */}
               <div className="flex justify-end gap-1.5 pt-2 border-t border-slate-100">
-                {contest.status === "PENDING" && (
-                  <>
-                    <button onClick={() => handleApproveContest(contest.id)} className="flex-1 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-bold border border-emerald-100 flex items-center justify-center gap-1"><Check className="w-4 h-4" /> Approve</button>
-                    <button onClick={() => handleRejectContest(contest.id)} className="flex-1 py-2 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold border border-rose-100 flex items-center justify-center gap-1"><X className="w-4 h-4" /> Reject</button>
-                  </>
+                {contest.status === "Draft" && (
+                  <button onClick={() => handleApproveContest(contest._id)} className="flex-1 py-2 bg-emerald-50 text-emerald-600 rounded-xl text-xs font-bold border border-emerald-100 flex items-center justify-center gap-1"><Check className="w-4 h-4" /> Approve</button>
                 )}
-                <button onClick={() => handleToggleFeature(contest.id, contest.isFeatured)} className={`p-2 rounded-xl border ${contest.isFeatured ? "bg-amber-50 text-amber-600 border-amber-200" : "bg-slate-50 text-slate-400"}`}><Star className={`w-4 h-4 ${contest.isFeatured ? "fill-amber-500 text-amber-500" : ""}`} /></button>
-                <button onClick={() => handleDeleteContest(contest.id, contest.title)} className="p-2 bg-slate-50 text-slate-400 hover:text-rose-600 border border-transparent rounded-xl"><Trash2 className="w-4 h-4" /></button>
+                {contest.status === "Published" && (
+                  <button onClick={() => handleRejectContest(contest._id)} className="flex-1 py-2 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold border border-rose-100 flex items-center justify-center gap-1"><X className="w-4 h-4" /> Reject</button>
+                )}
+                <button onClick={() => handleToggleFeature(contest._id, !!contest.isFeatured)} className={`p-2 rounded-xl border ${contest.isFeatured ? "bg-amber-50 text-amber-600 border-amber-200" : "bg-slate-50 text-slate-400"}`}><Star className={`w-4 h-4 ${contest.isFeatured ? "fill-amber-500 text-amber-500" : ""}`} /></button>
+                <button onClick={() => handleDeleteContest(contest._id, contest.title)} className="p-2 bg-slate-50 text-slate-400 hover:text-rose-600 border border-transparent rounded-xl"><Trash2 className="w-4 h-4" /></button>
               </div>
             </div>
           ))
         )}
       </div>
 
-      {/* 🖥️ ২. ডেস্কটপ ভিউ: ফুল ম্যাট্রিক্স টেবিল (Hidden on mobile/tablet, shown on large screens) */}
+      {/* 🖥️ ডেস্কটপ টেবিল ভিউ */}
       <div className="hidden lg:block bg-white/70 backdrop-blur-xl border border-slate-200/60 rounded-3xl overflow-hidden shadow-sm p-2">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -192,7 +276,7 @@ export default function AdminContestModeration() {
                 </tr>
               ) : (
                 filteredContests.map((contest) => (
-                  <tr key={contest.id} className="hover:bg-slate-50/50 transition-colors group">
+                  <tr key={contest._id} className="hover:bg-slate-50/50 transition-colors group">
                     <td className="p-4 space-y-1">
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-slate-900 text-sm block">{contest.title}</span>
@@ -202,36 +286,31 @@ export default function AdminContestModeration() {
                       </div>
                       <div className="flex items-center gap-4 text-[11px] font-semibold text-slate-400">
                         <span className="text-indigo-600 font-bold bg-indigo-50 border border-indigo-100/50 px-1.5 py-0.5 rounded-md">{contest.prize} Pool</span>
-                        <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {contest.deadline}</span>
+                        <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {new Date(contest.endDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</span>
                       </div>
                     </td>
-                    <td className="p-4 font-semibold text-slate-800 text-sm">{contest.organizer}</td>
+                    <td className="p-4 font-semibold text-slate-800 text-sm">{contest.createdBy?.name || "Unknown"}</td>
                     <td className="p-4">
                       <span className={`px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider border ${
-                        contest.status === "LIVE" ? "bg-emerald-50 border-emerald-100 text-emerald-700 animate-pulse" :
-                        contest.status === "APPROVED" ? "bg-blue-50 border-blue-100 text-blue-700" :
-                        contest.status === "PENDING" ? "bg-amber-50 border-amber-100 text-amber-700" :
-                        "bg-slate-100 border-slate-200 text-slate-600"
+                        contest.status === "Published" ? "bg-emerald-50 border-emerald-100 text-emerald-700" : "bg-amber-50 border-amber-100 text-amber-700"
                       }`}>{contest.status}</span>
                     </td>
                     <td className="p-4 text-center">
-                      {contest.reports > 3 ? (
-                        <span className="px-2 py-1 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl font-bold flex items-center gap-1 w-fit mx-auto animate-bounce text-[11px]"><ShieldAlert className="w-3.5 h-3.5" /> {contest.reports} Flags</span>
-                      ) : contest.reports > 0 ? (
-                        <span className="px-2 py-1 bg-amber-50 text-amber-600 border border-amber-100 rounded-xl font-bold flex items-center gap-1 w-fit mx-auto text-[11px]"><ShieldAlert className="w-3.5 h-3.5" /> {contest.reports} Report</span>
+                      {(contest.reports || 0) > 0 ? (
+                        <span className="px-2 py-1 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl font-bold flex items-center gap-1 w-fit mx-auto text-[11px]"><ShieldAlert className="w-3.5 h-3.5" /> {contest.reports} Flags</span>
                       ) : (
                         <span className="text-slate-400 font-bold text-[11px]">— Clean</span>
                       )}
                     </td>
                     <td className="p-4 text-right space-x-1">
-                      {contest.status === "PENDING" && (
-                        <>
-                          <button onClick={() => handleApproveContest(contest.id)} className="p-2 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-xl hover:bg-emerald-500 hover:text-white transition shadow-sm"><Check className="w-3.5 h-3.5" /></button>
-                          <button onClick={() => handleRejectContest(contest.id)} className="p-2 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl hover:bg-rose-500 hover:text-white transition shadow-sm"><X className="w-3.5 h-3.5" /></button>
-                        </>
+                      {contest.status === "Draft" && (
+                        <button onClick={() => handleApproveContest(contest._id)} className="p-2 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-xl hover:bg-emerald-500 hover:text-white transition shadow-sm" title="Publish Contest"><Check className="w-3.5 h-3.5" /></button>
                       )}
-                      <button onClick={() => handleToggleFeature(contest.id, contest.isFeatured)} className={`p-2 border rounded-xl transition shadow-sm ${contest.isFeatured ? "bg-amber-50 border-amber-200 text-amber-600" : "bg-slate-50 text-slate-400"}`}><Star className={`w-3.5 h-3.5 ${contest.isFeatured ? "fill-amber-500 text-amber-500" : ""}`} /></button>
-                      <button onClick={() => handleDeleteContest(contest.id, contest.title)} className="p-2 bg-slate-50 text-slate-400 hover:text-rose-600 border border-transparent hover:border-rose-100 rounded-xl transition"><Trash2 className="w-3.5 h-3.5" /></button>
+                      {contest.status === "Published" && (
+                        <button onClick={() => handleRejectContest(contest._id)} className="p-2 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl hover:bg-rose-500 hover:text-white transition shadow-sm" title="Move to Draft"><X className="w-3.5 h-3.5" /></button>
+                      )}
+                      <button onClick={() => handleToggleFeature(contest._id, !!contest.isFeatured)} className={`p-2 border rounded-xl transition shadow-sm ${contest.isFeatured ? "bg-amber-50 border-amber-200 text-amber-600" : "bg-slate-50 text-slate-400"}`} title="Toggle Premium Feature"><Star className={`w-3.5 h-3.5 ${contest.isFeatured ? "fill-amber-500 text-amber-500" : ""}`} /></button>
+                      <button onClick={() => handleDeleteContest(contest._id, contest.title)} className="p-2 bg-slate-50 text-slate-400 hover:text-rose-600 border border-transparent hover:border-rose-100 rounded-xl transition" title="Purge Contest"><Trash2 className="w-3.5 h-3.5" /></button>
                     </td>
                   </tr>
                 ))

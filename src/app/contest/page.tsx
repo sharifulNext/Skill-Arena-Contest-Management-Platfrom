@@ -12,17 +12,16 @@ export default function ContestsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
 
-  // 📡 ডাটাবেজ থেকে পাবলিশড কন্টেস্টগুলো নিয়ে আসার ফাংশন
+  
   const fetchLiveContests = async () => {
     try {
       setLoading(true);
-      // রিয়েল-টাইম ডাটার জন্য টাইমস্ট্যাম্প (?t=...) ব্যবহার করা হয়েছে
-      const res = await fetch(`/api/contest?t=${Date.now()}`); 
+      const res = await fetch(`/api/contest?view=public&t=${Date.now()}`); 
       const data = await res.json();
       
       if (data.success) {
-        // শুধুমাত্র যে কন্টেস্টগুলো 'Published' সেগুলোকে ফিল্টার করে পাবলিক পেজে দেখানো হবে
-        const publicContests = data.data.filter((c: any) => c.status === "Published");
+        const publicContests = data.data.filter((c: any) => c.status === "Published"
+);
         setContests(publicContests);
       }
     } catch (error) {

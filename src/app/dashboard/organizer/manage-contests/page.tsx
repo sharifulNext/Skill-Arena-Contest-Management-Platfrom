@@ -14,7 +14,7 @@ interface ContestType {
   category: string;
   difficulty: string;
   prize: string;
-  entryFee: number; // ৳ এন্ট্রি ফি অলরেডি ইন্টারফেসে আছে
+  entryFee: number; 
   startDate: string;
   endDate: string;
   rules: string;
@@ -31,7 +31,7 @@ export default function ManageContestsPage() {
 
   const fetchContests = async () => {
     try {
-      const res = await fetch("/api/contest");
+      const res = await fetch("/api/contest?view=organizer");
       const data = await res.json();
       if (data.success) setContests(data.data);
     } catch (error) {
@@ -45,13 +45,13 @@ export default function ManageContestsPage() {
     fetchContests();
   }, []);
 
-  // ✅ Edit modal খোলা
+  // Edit modal 
   const handleEditOpen = (contest: ContestType) => {
-    setEditData({ ...contest }); // copy করে নাও — original mutate না হয়
+    setEditData({ ...contest }); 
     setEditModalOpen(true);
   };
 
-  // ✅ Edit form submit
+  //  Edit form submit
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editData) return;
@@ -67,7 +67,7 @@ export default function ManageContestsPage() {
           category: editData.category,
           difficulty: editData.difficulty,
           prize: editData.prize,
-          entryFee: Number(editData.entryFee) || 0, // 🚀 নাম্বার ফরম্যাট সেফটি নিশ্চিত করা হলো
+          entryFee: Number(editData.entryFee) || 0, 
           startDate: editData.startDate,
           endDate: editData.endDate,
           rules: editData.rules,
@@ -77,7 +77,6 @@ export default function ManageContestsPage() {
       const data = await res.json();
 
       if (data.success) {
-        // Refetch না করে local state আপডেট
         setContests((prev) =>
           prev.map((c) => (c._id === editData._id ? { ...c, ...editData, entryFee: Number(editData.entryFee) || 0 } : c))
         );
@@ -230,7 +229,7 @@ export default function ManageContestsPage() {
         </motion.div>
       )}
 
-      {/* ✅ Edit Modal */}
+      {/*  Edit Modal */}
       <AnimatePresence>
         {editModalOpen && editData && (
           <motion.div
@@ -275,7 +274,6 @@ export default function ManageContestsPage() {
                   />
                 </div>
 
-                {/* 🚀 2-Column Grid: Prize Pool & Registration Fee */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">

@@ -1,59 +1,65 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { 
   CheckCircle2, Clock, XCircle, Code2, Sparkles, 
-  ExternalLink, Calendar, Search, SlidersHorizontal, Eye 
+  ExternalLink, Search, SlidersHorizontal, Eye, Loader2 
 } from "lucide-react";
 
-// 📋 ১. ইনবাউন্ড সাবমিশন মাস্টার ডাটা
-const initialSubmissions = [
-  {
-    id: "sub_01",
-    contest: "Next.js 15 Production Hyper-Sprint",
-    status: "Accepted",
-    score: "96/100",
-    submittedAt: "May 18, 2026 • 04:12 PM",
-    aiScore: "94%",
-    repoUrl: "github.com/shariful/nextjs-sprint",
-    aiFeedback: "Excellent component decoupling and caching setup via React Server Components. Bundle size is optimized. Minor improvement needed in edge runtime middleware condition blocks."
-  },
-  {
-    id: "sub_02",
-    contest: "AI Agent Automation & Orchestration",
-    status: "Pending",
-    score: "Reviewing",
-    submittedAt: "May 20, 2026 • 10:14 PM",
-    aiScore: "Processing",
-    repoUrl: "github.com/shariful/ai-orchestrator",
-    aiFeedback: "AI Agent is currently parsing repository tree structure, running AST security scans, and auditing instruction prompts. Latency expected: ~45 seconds."
-  },
-  {
-    id: "sub_03",
-    contest: "Secure Smart Contract Vulnerability Audit",
-    status: "Rejected",
-    score: "42/100",
-    submittedAt: "May 12, 2026 • 11:45 AM",
-    aiScore: "45%",
-    repoUrl: "github.com/shariful/smart-audit",
-    aiFeedback: "Critical reentrancy vulnerability detected in pool withdrawal mechanics. Code architecture failed semantic safety protocols. Re-architect logic using checks-effects-interactions patterns."
-  }
-];
+interface SubmissionItem {
+  id: string;
+  contest: string;
+  status: "Accepted" | "Pending" | "Rejected" | string;
+  score: string;
+  submittedAt: string;
+  aiScore: string;
+  repoUrl: string;
+  aiFeedback: string;
+}
 
 export default function ParticipantSubmissions() {
-  const [submissions, setSubmissions] = useState(initialSubmissions);
+  const [submissions, setSubmissions] = useState<SubmissionItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
-  
-  // ⚡ মোডাল এবং ডিটেইলস সিলেক্টর স্টেট
-  const [selectedSub, setSelectedSub] = useState<typeof initialSubmissions[0] | null>(null);
+  const [selectedSub, setSelectedSub] = useState<SubmissionItem | null>(null);
 
-  // 🔍 সার্চ ও ফিল্টার প্রসেসর
+  // 🔄 ডাটাবেজ থেকে রিয়েল-টাইম ডাটা ফেচিং পাইপলাইন
+  useEffect(() => {
+    const fetchSubmissionsHistory = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch("/api/participant/submissions");
+        const payload = await res.json();
+        
+        if (res.ok && payload.success) {
+          setSubmissions(payload.data);
+        }
+      } catch (err) {
+        console.error("Error communicating with processing nodes:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSubmissionsHistory();
+  }, []);
+
+  // 🔍 সার্চ ও ফিল্টার প্রসেসর (রিয়েল ডাটার ওপর কাজ করবে)
   const filteredSubmissions = submissions.filter(sub => {
     const matchesSearch = sub.contest.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === "All" || sub.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-2">
+        <Loader2 className="w-10 h-10 text-indigo-600 animate-spin" />
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Compiling Submission Logs...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 md:p-10 space-y-8 bg-slate-50 min-h-screen">
@@ -123,13 +129,11 @@ export default function ParticipantSubmissions() {
                     onClick={() => setSelectedSub(sub)}
                     className="hover:bg-indigo-50/40 transition-colors cursor-pointer group"
                   >
-                    {/* কোড কনটেস্ট টাইটেল */}
                     <td className="p-4">
                       <span className="font-extrabold text-slate-900 block group-hover:text-indigo-600 transition-colors">{sub.contest}</span>
                       <span className="text-[10px] text-slate-400 font-mono block mt-0.5">{sub.id}</span>
                     </td>
                     
-                    {/* রিকোয়ার্ড স্ট্যাটাস কালার কোডিং */}
                     <td className="p-4">
                       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-black uppercase ${
                         sub.status === "Accepted" 
@@ -145,17 +149,14 @@ export default function ParticipantSubmissions() {
                       </span>
                     </td>
                     
-                    {/* স্কোর */}
                     <td className="p-4 font-mono font-bold text-slate-800">
                       {sub.score}
                     </td>
                     
-                    {/* সাবমিটেড টাইম */}
                     <td className="p-4 text-slate-500 font-medium">
                       {sub.submittedAt}
                     </td>
                     
-                    {/* এআই স্কোর কলাম */}
                     <td className="p-4">
                       <span className={`inline-flex items-center gap-1 font-bold font-mono ${
                         sub.status === "Pending" ? "text-slate-400" : "text-purple-600 bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100/60"
@@ -164,7 +165,6 @@ export default function ParticipantSubmissions() {
                       </span>
                     </td>
 
-                    {/* রো অ্যাকশন ইন্ডিকেটর */}
                     <td className="p-4 text-right">
                       <button className="p-2 text-slate-400 group-hover:text-indigo-600 group-hover:bg-indigo-50 rounded-xl transition">
                         <Eye className="w-4 h-4" />
@@ -178,19 +178,12 @@ export default function ParticipantSubmissions() {
         </div>
       </div>
 
-      {/* 🎴 ৩. COOL FEATURE: SUBMISSION DETAILS MODAL */}
+      {/* 🎴 ৩. SUBMISSION DETAILS MODAL */}
       {selectedSub && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* ব্যাকড্রপ ব্লার */}
-          <div 
-            className="absolute inset-0 bg-slate-900/40 backdrop-blur-md transition-opacity"
-            onClick={() => setSelectedSub(null)}
-          />
-
-          {/* মডাল বডি */}
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md transition-opacity" onClick={() => setSelectedSub(null)} />
           <div className="bg-white border border-slate-200 w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl relative z-10 animate-in fade-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
             
-            {/* মডাল হেডার */}
             <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-start gap-4">
               <div className="space-y-1">
                 <span className="text-[10px] font-mono font-bold text-slate-400 uppercase tracking-wider">Audit Inspection Hub</span>
@@ -204,10 +197,7 @@ export default function ParticipantSubmissions() {
               </button>
             </div>
 
-            {/* মডাল স্ক্রোলবল কনটেন্ট এরিয়া */}
             <div className="p-6 space-y-6 overflow-y-auto flex-1 text-xs">
-              
-              {/* ম্যাট্রিক্স গ্রিড */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 font-semibold text-slate-500">
                 <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                   <span className="block text-[10px] text-slate-400 font-bold mb-1">DEPLOYMENT STATE</span>
@@ -223,12 +213,12 @@ export default function ParticipantSubmissions() {
                 </div>
               </div>
 
-              {/* গিটহাব সোর্স কোড রুট */}
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-400">REPOSITORY INSTANCE LINK</label>
                 <a 
-                  href={`https://${selectedSub.repoUrl}`}
+                  href={selectedSub.repoUrl.startsWith("http") ? selectedSub.repoUrl : `https://${selectedSub.repoUrl}`}
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl flex items-center justify-between text-indigo-700 hover:bg-indigo-50 transition group font-mono font-bold"
                 >
                   <span>{selectedSub.repoUrl}</span>
@@ -236,7 +226,6 @@ export default function ParticipantSubmissions() {
                 </a>
               </div>
 
-              {/* 🤖 এআই ইনসাইট ফিডব্যাক জোন */}
               <div className="space-y-2">
                 <label className="text-xs font-bold text-purple-500 flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 fill-purple-200" /> COGNITIVE AI FEEDBACK TELEMETRY
@@ -245,8 +234,8 @@ export default function ParticipantSubmissions() {
                   {selectedSub.aiFeedback}
                 </div>
               </div>
-
             </div>
+
           </div>
         </div>
       )}

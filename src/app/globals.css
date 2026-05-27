@@ -134,3 +134,51 @@
     @apply font-sans;
   }
 }
+
+/* ডার্ক মোড কনফিগারেশন */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-slate-200 dark:border-slate-800;
+  }
+  body {
+    @apply bg-[hsl(var(--background))] text-[hsl(var(--foreground))];
+  }
+}
+
+@layer base {
+  body {
+    @apply antialiased transition-colors duration-300;
+  }
+
+  /* লাইট মোডে টেক্সট হবে প্রফেশনাল ডার্ক গ্রে */
+  .light {
+    --text-primary: #0f172a;   /* Slate 900 */
+    --text-secondary: #475569; /* Slate 600 */
+  }
+
+  /* ডার্ক মোডে টেক্সট হবে কিছুটা গ্রে-ইশ এবং সফট */
+  .dark {
+    --text-primary: #f8fafc;   /* Slate 50 */
+    --text-secondary: #94a3b8; /* Slate 400 */
+  }
+
+  h1, h2, h3 {
+    @apply tracking-tight; /* হেডিংগুলোকে আরও প্রিমিয়াম করতে টাইট ট্র্যাকিং */
+  }
+
+  p {
+    @apply leading-relaxed; /* প্যারাগ্রাফের লাইন হাইট বাড়িয়ে পড়তে আরামদায়ক করা */
+  }
+}

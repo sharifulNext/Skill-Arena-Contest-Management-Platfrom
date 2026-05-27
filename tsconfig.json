@@ -29,6 +29,6 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts"
-  ],
+, "src/app/api/admin/contests/route.js", "src/app/api/admin/contests/[id]/routets"  ],
   "exclude": ["node_modules"]
 }

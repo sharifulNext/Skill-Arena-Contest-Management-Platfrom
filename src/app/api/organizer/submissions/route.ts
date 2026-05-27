@@ -1,44 +1,60 @@
 import { NextRequest, NextResponse } from "next/server";
-import Submission from "@/model/Submission";
 import { connectDB } from "@/lib/db";
+import Submission from "@/model/Submission";
+import { auth } from "@/lib/auth";
 
-// 📋 ১. অর্গানাইজার প্যানেলের সব সাবমিশন ফেচ করা
+// 📋 ১. ডাটাবেজ থেকে রিয়েল ডাটা তুলে আনা (No More Tricks)
 export async function GET() {
   try {
     await connectDB();
-
-    // ডাটাবেজের সব সাবমিশন লেটেস্ট অনুযায়ী নিয়ে আসবে
-    const submissions = await Submission.find({}).sort({ createdAt: -1 });
     
+    const session = await auth();
+    if (!session || (session.user as any)?.role !== "ORGANIZER") {
+      return NextResponse.json({ success: false, message: "Unauthorized." }, { status: 401 });
+    }
+
+    // ডাটাবেজের আসল ডাটা সরাসরি চলে যাবে ফ্রন্টএন্ডে
+    const submissions = await Submission.find({}).sort({ createdAt: -1 });
     return NextResponse.json({ success: true, data: submissions }, { status: 200 });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
 
-// 🚀 ২. ডামি ডেটা সাবমিট করে টেস্ট করার জন্য POST API
-export async function POST(req: NextRequest) {
+// 🎯 ২. অর্গানাইজার কর্তৃক স্ট্যাটাস ও স্কোর আপডেট করার PATCH API
+export async function PATCH(req: NextRequest) {
   try {
     await connectDB();
+    
+    const session = await auth();
+    if (!session || (session.user as any)?.role !== "ORGANIZER") {
+      return NextResponse.json({ success: false, message: "Unauthorized Node Access." }, { status: 401 });
+    }
+
     const body = await req.json();
+    const { submissionId, status, aiScore, aiFeedback } = body;
 
-    // মঙ্গোডিবি অবজেক্ট আইডি জেনারেট করার জন্য ডামি আইডি (আপনার আসল কন্টেস্ট আইডি থাকলে সেটি বসাবেন)
-    const mockContestId = body.contestId || "664f1234567890abcdef1234";
+    if (!submissionId) {
+      return NextResponse.json({ success: false, message: "Submission ID is required." }, { status: 400 });
+    }
 
-    const newSubmission = await Submission.create({
-      contestId: mockContestId,
-      participantName: body.participantName || "Cyber Ninja",
-      participantEmail: body.participantEmail || "ninja@skillarena.com",
-      repoUrl: body.repoUrl || "https://github.com/test/arena-repo",
-      liveUrl: body.liveUrl || "https://arena-live.vercel.app",
-      notes: "Injected directly into organizer submissions lane.",
-      aiScore: Math.floor(Math.random() * (100 - 70 + 1)) + 70, // ৭০ থেকে ১০০ এর মধ্যে র্যান্ডম স্কোর
-      status: "Evaluated",
-      aiFeedback: "Excellent structural layout and clean standard modules.",
-    });
+    // ডাটাবেজে খুঁজে ওই সাবমিশনটি আপডেট করা
+    const updatedSubmission = await Submission.findByIdAndUpdate(
+      submissionId,
+      { 
+        status, 
+        aiScore: Number(aiScore), 
+        aiFeedback: aiFeedback || "Reviewed manually by Organizer." 
+      },
+      { new: true } // আপডেটেড ডাটা রিটার্ন করবে
+    );
 
-    return NextResponse.json({ success: true, data: newSubmission }, { status: 201 });
+    if (!updatedSubmission) {
+      return NextResponse.json({ success: false, message: "Submission not found." }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, data: updatedSubmission }, { status: 200 });
   } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 }
