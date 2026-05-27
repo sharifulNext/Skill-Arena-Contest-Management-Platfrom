@@ -1,16 +1,25 @@
- // আপনার auth কনফিগ ফাইল থেকে ইমপোর্ট করুন
+// src/middleware.ts
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-import { auth } from "./lib/auth";
+export async function middleware(req: NextRequest) {
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const { pathname } = req.nextUrl;
 
-export default auth((req) => {
-  // যদি ইউজার লগইন করা না থাকে এবং তারা ড্যাশবোর্ড বা প্রোটেক্টেড রুটে যাওয়ার চেষ্টা করে
-  if (!req.auth && req.nextUrl.pathname !== "/login") {
-    const newUrl = new URL("/login", req.nextUrl.origin);
-    return Response.redirect(newUrl);
+  // প্রোটেক্টেড রুটগুলোর তালিকা
+  const isProtected = 
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/profile") ||
+    pathname.startsWith("/settings");
+
+  if (isProtected && !token) {
+    return NextResponse.redirect(new URL("/login", req.url));
   }
-});
+
+  return NextResponse.next();
+}
 
 export const config = {
-  // আপনার ড্যাশবোর্ড এবং প্রোটেক্টেড রুটগুলো এখানে রাখুন
   matcher: ["/dashboard/:path*", "/profile/:path*", "/settings/:path*"],
 };
