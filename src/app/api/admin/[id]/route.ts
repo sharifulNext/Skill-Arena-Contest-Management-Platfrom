@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
-import User from "@/model/User";
+import {User} from "@/model/User";
 import { auth } from "@/lib/auth";
 import mongoose from "mongoose";
 
